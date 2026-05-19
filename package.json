@@ -1,0 +1,17 @@
+{
+  "name": "orion-survey",
+  "version": "1.0.0",
+  "description": "מערכת שאלוני הערכת עובדים – אוריון מערכות",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "devDependencies": {
+    "mammoth": "^1.12.0",
+    "xlsx": "^0.18.5"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "mongoose": "^9.6.2"
+  }
+}

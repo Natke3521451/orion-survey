@@ -1,0 +1,13 @@
+node_modules/
+.env
+data/responses.json
+
+# קבצי עבודה מקומיים
+Pic/
+עץ מבנה/
+*.docx
+*.xlsx
+*.pdf
+~$*
+64104304-22b7-493c-8804-1a8c39adb207.png
+הפעל.bat

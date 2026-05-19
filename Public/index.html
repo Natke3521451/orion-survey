@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>שאלון הערכת עובדים – אוריון מערכות</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     מסך 1 – כניסה (וידאו)
+══════════════════════════════════════════════ -->
+<div id="screen-login" class="screen active" style="padding:0; background:none;">
+  <!-- Video background -->
+  <video id="login-video" autoplay muted loop playsinline
+    style="position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;">
+    <source src="/Front/Orion.mp4" type="video/mp4"/>
+  </video>
+  <!-- Dark overlay -->
+  <div style="position:fixed;inset:0;background:rgba(10,40,60,0.45);z-index:1;"></div>
+  <!-- Content -->
+  <div class="login-box" style="position:relative;z-index:2;">
+    <img src="images/logo.jpg" alt="אוריון מערכות" class="logo"/>
+    <p class="tagline">מערכת שאלוני הערכת עובדים</p>
+    <button class="btn btn-primary btn-lg btn-block" onclick="showScreen('welcome')">
+      כניסה למערכת ←
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     מסך 2 – הקדמת מנכ"ל
+══════════════════════════════════════════════ -->
+<div id="screen-welcome" class="screen">
+  <div class="card">
+    <div class="company-header">
+      <img src="images/logo.jpg" alt="אוריון מערכות"/>
+      <span>שאלון הערכת עובדים 2026</span>
+    </div>
+    <p class="screen-title">מילה ממנכ"ל קבוצת אוריון</p>
+    <div class="ceo-message">
+      <span class="highlight">שלום,</span>
+      בקרוב תתבקש/י למלא שאלון הערכה קצר הנוגע לעבודה שלך בחברה.
+      <br/><br/>
+      אנחנו רוצים להבין טוב יותר איך אתה חווה את העבודה, מה עובד טוב ומה פחות עובד, ואיפה אפשר להשתפר ביחד.
+      <br/><br/>
+      ✔ זה לא מבחן — אין תשובות נכונות או לא נכונות.<br/>
+      ✔ אין השפעה מיידית על שכר או תנאים.<br/>
+      ✔ המטרה היחידה: <strong>שיפור אמיתי</strong> עבורך ועבור הארגון.
+      <br/><br/>
+      <strong>לענות בכנות מלאה — ככה תוצאות השאלון יועילו לך יותר.</strong>
+    </div>
+    <div class="ceo-signature">
+      <strong>שי ירושלמי</strong><br/>
+      מנכ"ל קבוצת אוריון
+    </div>
+    <hr class="divider"/>
+    <button class="btn btn-primary btn-block" onclick="showScreen('role')">
+      המשך ←
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     מסך 3 – בחירת תפקיד
+══════════════════════════════════════════════ -->
+<div id="screen-role" class="screen">
+  <div class="card">
+    <div class="company-header">
+      <img src="images/logo.jpg" alt="אוריון מערכות"/>
+    </div>
+    <p class="screen-title">מי אתה?</p>
+    <p class="screen-sub">בחר את סוג הכניסה המתאים לך</p>
+    <div class="role-buttons">
+      <button class="role-btn" onclick="startEmployeeFlow()">
+        <span class="icon">👤</span>
+        <span class="label">עובד</span>
+        <span class="sublabel">מלא שאלון על עצמך</span>
+      </button>
+      <button class="role-btn" onclick="startManagerFlow()">
+        <span class="icon">👔</span>
+        <span class="label">מנהל</span>
+        <span class="sublabel">מלא שאלון על הצוות שלך</span>
+      </button>
+    </div>
+    <hr class="divider"/>
+    <p style="text-align:center; font-size:0.82rem; color:#888;">
+      לדשבורד ניהולי: <a href="dashboard.html" style="color:var(--primary);">כניסת מנכ"ל</a>
+    </p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     מסך 4 – בחירת שם עובד
+══════════════════════════════════════════════ -->
+<div id="screen-employee-name" class="screen">
+  <div class="card">
+    <div class="company-header">
+      <img src="images/logo.jpg" alt="אוריון מערכות"/>
+    </div>
+    <p class="screen-title">שאלון עצמי – עובד</p>
+    <p class="screen-sub">בחר את שמך מהרשימה כדי להתחיל</p>
+    <select id="emp-name-select" class="select-list">
+      <option value="">— בחר שם —</option>
+    </select>
+    <div id="already-submitted-emp" style="display:none; background:rgba(255,180,0,0.12); border:1.5px solid #ffa500; border-radius:10px; padding:12px 16px; margin-bottom:16px; font-size:0.9rem; color:#7a4f00;">
+      ⚠️ שים לב: כבר מילאת שאלון בעבר. אם תמשיך, השאלון הקודם ייחלף.
+    </div>
+    <div class="nav-row">
+      <button class="btn btn-secondary" onclick="showScreen('role', true)">← חזרה</button>
+      <button class="btn btn-primary" onclick="goToInstructions()">המשך ←</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     מסך 5 – הוראות לעובד
+══════════════════════════════════════════════ -->
+<div id="screen-instructions" class="screen">
+  <div class="card">
+    <div class="company-header">
+      <img src="images/logo.jpg" alt="אוריון מערכות"/>
+    </div>
+    <p class="screen-title">לפני שמתחילים</p>
+    <div class="instructions-box">
+      <div class="instr-item">
+        <span class="instr-icon">📋</span>
+        <span>השאלון כולל <strong>25 שאלות דירוג</strong> בין 1 ל-4, ו-<strong>3 שאלות פתוחות</strong>. לוקח כ-5-10 דקות.</span>
+      </div>
+      <div class="instr-item">
+        <span class="instr-icon">🔢</span>
+        <span><strong>1 = נמוך מאד &nbsp;|&nbsp; 2 = נמוך &nbsp;|&nbsp; 3 = גבוה &nbsp;|&nbsp; 4 = גבוה מאד</strong></span>
+      </div>
+      <div class="instr-item">
+        <span class="instr-icon">🎯</span>
+        <span>ענה בכנות. אין תשובות נכונות או שגויות. המטרה היא שיפור.</span>
+      </div>
+      <div class="instr-item">
+        <span class="instr-icon">🔒</span>
+        <span>השאלון אינו אנונימי, אך התשובות משמשות לשיפור בלבד.</span>
+      </div>
+      <div class="instr-item">
+        <span class="instr-icon">↩️</span>
+        <span>ניתן לחזור אחורה ולשנות תשובה בכל שלב.</span>
+      </div>
+    </div>
+    <div class="nav-row">
+      <button class="btn btn-secondary" onclick="showScreen('employee-name', true)">← חזרה</button>
+      <button class="btn btn-primary" onclick="startEmployeeQuestions()">התחל שאלון ←</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     מסך 6 – שאלה (עובד ומנהל)
+══════════════════════════════════════════════ -->
+<div id="screen-question" class="screen">
+  <div class="card">
+    <div class="company-header">
+      <img src="images/logo.jpg" alt="אוריון מערכות"/>
+      <span id="q-for-label" style="font-size:0.85rem; color:#888;"></span>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="q-step-label">שאלה 1 מתוך 28</span>
+        <span id="q-pct-label">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="q-progress" style="width:0%"></div>
+      </div>
+    </div>
+
+    <span class="category-badge" id="q-cat-badge">ביצוע ותפוקה</span>
+    <p class="question-text" id="q-text">טוען...</p>
+
+    <!-- Rating -->
+    <div class="rating-options" id="rating-options">
+      <button class="rating-btn" data-val="1" onclick="selectRating(1)">
+        <span class="num">1</span><span class="lbl">נמוך מאד</span>
+      </button>
+      <button class="rating-btn" data-val="2" onclick="selectRating(2)">
+        <span class="num">2</span><span class="lbl">נמוך</span>
+      </button>
+      <button class="rating-btn" data-val="3" onclick="selectRating(3)">
+        <span class="num">3</span><span class="lbl">גבוה</span>
+      </button>
+      <button class="rating-btn" data-val="4" onclick="selectRating(4)">
+        <span class="num">4</span><span class="lbl">גבוה מאד</span>
+      </button>
+    </div>
+
+    <!-- Open question -->
+    <div class="open-question" id="open-question-wrap" style="display:none;">
+      <textarea id="open-answer" placeholder="כתוב את תשובתך כאן..."></textarea>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-secondary" onclick="prevQuestion()">← חזרה</button>
+      <button class="btn btn-primary" id="btn-next" onclick="nextQuestion()">הבא ←</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     מסך 7 – תודה
+══════════════════════════════════════════════ -->
+<div id="screen-thankyou" class="screen">
+  <div class="card">
+    <div class="thankyou-box">
+      <div class="thankyou-icon">🙏</div>
+      <p class="thankyou-title">תודה רבה!</p>
+      <p class="thankyou-sub">
+        השאלון נשמר בהצלחה.<br/>
+        <strong>דעתך חשובה להצלחת הארגון.</strong><br/>
+        אנחנו מעריכים את הכנות ואת שיתוף הפעולה שלך.
+      </p>
+      <button class="btn btn-primary" id="btn-after-thanks" onclick="afterThanks()">
+        סיום
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     מסך 8 – בחירת שם מנהל
+══════════════════════════════════════════════ -->
+<div id="screen-manager-name" class="screen">
+  <div class="card">
+    <div class="company-header">
+      <img src="images/logo.jpg" alt="אוריון מערכות"/>
+    </div>
+    <p class="screen-title">שאלון מנהל</p>
+    <p class="screen-sub">בחר את שמך מהרשימה</p>
+    <select id="mgr-name-select" class="select-list">
+      <option value="">— בחר שם —</option>
+    </select>
+    <div class="nav-row">
+      <button class="btn btn-secondary" onclick="showScreen('role', true)">← חזרה</button>
+      <button class="btn btn-primary" onclick="goToManagerEmployees()">המשך ←</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     מסך 9 – בחירת עובד להערכה
+══════════════════════════════════════════════ -->
+<div id="screen-manager-employees" class="screen">
+  <div class="card card-wide">
+    <div class="company-header">
+      <img src="images/logo.jpg" alt="אוריון מערכות"/>
+      <span id="mgr-name-display" style="font-weight:700; color:var(--primary);"></span>
+    </div>
+    <p class="screen-title">הערכת עובדים</p>
+    <p class="screen-sub">לחץ על שם עובד כדי למלא עליו שאלון. עובדים שהשלמת יסומנו ✓</p>
+    <div class="employee-chips" id="employee-chips-list"></div>
+    <hr class="divider"/>
+    <div class="nav-row">
+      <button class="btn btn-secondary" onclick="showScreen('manager-name', true)">← חזרה</button>
+      <button class="btn btn-primary" onclick="finishManagerFlow()">סיום הערכות</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
