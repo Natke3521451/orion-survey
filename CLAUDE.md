@@ -1,6 +1,10 @@
-# CLAUDE.md — מדריך בניית מערכת שאלוני הערכת עובדים
+# CLAUDE.md — מדריך בניית מערכת סקר / שאלון דיגיטלי
 
-מסמך זה מסכם את כל מה שנדרש לבניית מערכת שאלונים ארגונית דומה לזו שנבנתה עבור **קבוצת אוריון**.
+מסמך זה מתאר את הארכיטקטורה, הקוד, ופתרונות הבעיות שנצברו בבניית מערכת שאלונים דיגיטלית.
+**ניתן לשימוש חוזר לכל סוג סקר:** הערכת עובדים, שביעות רצון לקוחות, שאלון קהילה, מחקר, הצבעה, וכד'.
+
+דוגמת יישום: **שאלון הערכת עובדים — קבוצת אוריון** (2026).
+
 ---
 
 ## 1. ארכיטקטורת המערכת
@@ -19,144 +23,183 @@
 
 | קובץ | תפקיד |
 |------|--------|
-| `Public/index.html` | כל מסכי השאלון (9 מסכים ב-SPA אחד) |
+| `Public/index.html` | כל מסכי השאלון (SPA אחד) |
 | `Public/css/style.css` | עיצוב + מערכת מסכים עם Slide Transition |
-| `Public/js/data.js` | נתוני הארגון + שאלות |
+| `Public/js/data.js` | הגדרות: רשימות משתמשים + שאלות |
 | `Public/js/app.js` | לוגיקת השאלון |
 | `Public/dashboard.html` | דשבורד ניהולי (Chart.js) |
 | `Public/js/dashboard.js` | לוגיקת הדשבורד |
 | `server.js` | Express API + שמירה ל-MongoDB/JSON |
-| `data/responses.json` | אחסון מקומי (מחוץ ל-git) |
+| `data/responses.json` | אחסון מקומי לפיתוח (מחוץ ל-git) |
 
 ---
 
-## 2. מבנה השאלון (SPA עם Slide Transitions)
+## 2. מערכת המסכים — SPA עם Slide Transitions
 
-### מסכים לפי סדר
-1. **login** — וידאו ברקע + כפתור כניסה
-2. **welcome** — מילת מנכ"ל
-3. **role** — בחירת עובד / מנהל
-4. **employee-name** — בחירת שם מהרשימה
-5. **instructions** — הסבר לפני השאלון
-6. **question** — מסך שאלות (משמש גם לעובד וגם למנהל)
-7. **thankyou** — מסך סיום
-8. **manager-name** — בחירת שם מנהל
-9. **manager-employees** — בחירת עובד להערכה
+כל המסכים יושבים על דף HTML אחד. מעבר ביניהם נעשה ב-CSS transform בלבד — ללא טעינת דף.
 
-### ניווט בין מסכים
+### ניווט
 ```javascript
-showScreen('screen-id');          // קדימה
-showScreen('screen-id', true);    // אחורה (אנימציה הפוכה)
+showScreen('screen-id');        // קדימה — נכנס מימין
+showScreen('screen-id', true);  // אחורה — נכנס משמאל
 ```
-האנימציה מבוססת על `translateX` עם `cubic-bezier(.4,0,.2,1)` ב-420ms.
+
+### אנימציה (style.css)
+```css
+.screen {
+  position: fixed; inset: 0;
+  transform: translateX(100%);   /* מוסתר כברירת מחדל */
+  transition: transform 0.42s cubic-bezier(.4,0,.2,1);
+  visibility: hidden;
+}
+.screen.active { transform: translateX(0); visibility: visible; }
+```
+
+### מבנה מסכים טיפוסי לסקר
+1. **login** — מסך פתיחה (וידאו / תמונה + כפתור כניסה)
+2. **welcome** — הקדמה / הסבר מטרת הסקר
+3. **role** *(אופציונלי)* — בחירת סוג משיב (אם יש יותר מסוג אחד)
+4. **identity** — בחירת שם / מזהה מהרשימה
+5. **instructions** — הוראות מילוי
+6. **question** — מסך שאלות (אותו מסך לכל השאלות)
+7. **thankyou** — מסך סיום
+
+הוסף / הסר מסכים לפי הצורך — כל מסך הוא div עם `id="screen-X"`.
 
 ---
 
 ## 3. מבנה הנתונים (data.js)
 
+### מבנה גמיש לכל סקר
 ```javascript
-const ORG = {
-  allEmployees: ["שם1", "שם2", ...],  // כל העובדים לשאלון עצמי
-  managers: [
-    { name: "שם מנהל", employees: ["עובד1", "עובד2"] },
-    ...
-  ]
-};
+// רשימת משיבים (אם הסקר ממוקד אוכלוסייה ידועה)
+const RESPONDENTS = ["שם1", "שם2", ...];
 
-const CATEGORIES = ['ביצוע ותפוקה', 'אחריות והתנהלות', 'עבודה בצוות', 'ניהול ותקשורת', 'מחוברות ושביעות רצון'];
+// קטגוריות (אופציונלי — לסיווג שאלות)
+const CATEGORIES = ["קטגוריה א", "קטגוריה ב", ...];
 
-// שאלות דירוג: id = q1..q25, cat = 0..4 (5 שאלות לקטגוריה)
-const EMPLOYEE_QUESTIONS = [{ id: 'q1', cat: 0, text: '...' }, ...];
-const MANAGER_QUESTIONS  = [{ id: 'q1', cat: 0, text: '...' }, ...];
+// שאלות דירוג
+// id: מזהה ייחודי | cat: אינדקס קטגוריה | text: טקסט השאלה
+const QUESTIONS = [
+  { id: 'q1', cat: 0, text: 'שאלה ראשונה?' },
+  { id: 'q2', cat: 0, text: 'שאלה שנייה?' },
+  ...
+];
 
-// שאלות פתוחות: id = o1..o3
-const EMPLOYEE_OPEN = [{ id: 'o1', text: '...' }, ...];
-const MANAGER_OPEN  = [{ id: 'o1', text: '...' }, ...];
+// שאלות פתוחות
+const OPEN_QUESTIONS = [
+  { id: 'o1', text: 'שאלה פתוחה ראשונה?' },
+  ...
+];
 ```
 
-**מבנה ציונים:** 1–4 (נמוך מאד / נמוך / גבוה / גבוה מאד)
-**ציון מקסימלי:** 25 שאלות × 4 = 100 נקודות לכל קטגוריה/סה"כ
+### סולם ציונים נפוץ (התאם לפי הצורך)
+| ערך | משמעות |
+|-----|---------|
+| 1 | נמוך מאד |
+| 2 | נמוך |
+| 3 | גבוה |
+| 4 | גבוה מאד |
+
+ניתן להשתמש בסולם 1–5, 1–10, כן/לא, בחירה מרובה — רק שנה את כפתורי הדירוג ב-HTML ואת `selectRating()` ב-app.js.
 
 ---
 
 ## 4. ה-API (server.js)
 
+### נקודות קצה בסיסיות לכל סקר
+
 | Method | Endpoint | תפקיד |
 |--------|----------|--------|
-| GET | `/api/submitted-names` | שמות עובדים שכבר מילאו (להסתרה מהרשימה) |
-| GET | `/api/check-submission?type=employee&name=X` | בדיקה אם שם ספציפי כבר קיים |
-| POST | `/api/submit/employee` | שמירת שאלון עובד |
-| POST | `/api/submit/manager` | שמירת שאלון מנהל |
-| POST | `/api/dashboard` | שליפת כל הנתונים (דורש סיסמה) |
-| POST | `/api/export` | ייצוא Excel (דורש סיסמה) |
+| GET | `/api/submitted-names` | מי כבר מילא (להסתרה מרשימה) |
+| GET | `/api/check-submission?name=X` | בדיקה פרטנית |
+| POST | `/api/submit` | שמירת תשובות |
+| POST | `/api/dashboard` | שליפת נתונים (מוגן סיסמה) |
+| POST | `/api/export` | ייצוא Excel (מוגן סיסמה) |
 
-### body של שליחת שאלון עובד
+### מבנה body לשמירת תשובות
 ```json
-{ "employeeName": "...", "ratings": { "q1": 3, "q2": 4, ... }, "open": { "o1": "...", "o2": "...", "o3": "..." } }
+{
+  "respondentName": "שם המשיב",
+  "groupId": "קבוצה / מחלקה (אופציונלי)",
+  "ratings": { "q1": 3, "q2": 4, "q3": 1 },
+  "open": { "o1": "תשובה חופשית", "o2": "..." },
+  "timestamp": "2026-01-01T00:00:00Z"
+}
 ```
 
-### body של שליחת שאלון מנהל
-```json
-{ "managerName": "...", "employeeName": "...", "ratings": {...}, "open": {...} }
+### שמירה כפולה — MongoDB + JSON
+```javascript
+// server.js
+if (MONGODB_URI) {
+  // שמור ב-MongoDB Atlas (פרודקשן)
+} else {
+  // שמור ב-data/responses.json (פיתוח מקומי)
+}
 ```
 
 ---
 
-## 5. שמירת נתונים — מצב כפול
+## 5. משתני סביבה (.env)
 
-```javascript
-// .env
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/...
-ADMIN_PASSWORD=your_password
+```bash
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/dbname
+ADMIN_PASSWORD=your_secure_password
 PORT=3000
 ```
 
-- **יש MONGODB_URI** → שומר ל-MongoDB Atlas (ענן)
-- **אין MONGODB_URI** → שומר ל-`data/responses.json` (מקומי, לפיתוח)
-
-**קולקציות MongoDB:** `employees`, `managers`
+- **פיתוח:** צור קובץ `.env` בשורש. הוסף `.env` ל-`.gitignore`.
+- **פרודקשן (Render):** הגדר בממשק תחת Environment Variables.
 
 ---
 
 ## 6. דשבורד ניהולי
 
-- כניסה עם סיסמה דרך `/api/dashboard`
-- גרפים עם Chart.js 4.4.0 (Bar chart לציונים, Bar chart לפערים)
-- טבלת עובדים עם פילטר לפי מנהל / סטטוס פער / חיפוש שם
-- פרופיל פרטני לכל עובד: ציון עצמי מול ציון מנהל לפי קטגוריה
-- ייצוא Excel עם כל הנתונים
+### מה כדאי להציג
+- **כרטיסי סטטיסטיקה:** כמה מילאו, ממוצע כולל, אחוז השלמה
+- **גרפים (Chart.js 4.4.0):** ציונים לפי קטגוריה, השוואה בין קבוצות
+- **טבלת תשובות** עם פילטרים (לפי קבוצה, ציון, חיפוש שם)
+- **פרופיל פרטני** — פירוט לפי משיב בודד
+- **ייצוא Excel**
 
-### סטטוסי פער (עובד מול מנהל)
-| פער | צבע | משמעות |
-|-----|-----|---------|
-| 0–5 | ירוק | סנכרון |
-| 6–9 | צהוב | פער בינוני |
-| 10–15 | כתום | פער משמעותי |
-| 16+ | אדום | פער קריטי |
+### כניסה מאובטחת לדשבורד
+```javascript
+// dashboard.js
+const resp = await fetch('/api/dashboard', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ password: enteredPassword })
+});
+```
+
+### גלילה בדשבורד (חובה לעקוף את ה-CSS הגלובלי)
+```css
+/* dashboard.html — בתוך <style> */
+html, body { overflow: auto !important; height: auto !important; min-height: 100%; }
+```
 
 ---
 
 ## 7. פריסה לענן
 
-### תשתית
-- **קוד:** GitHub (private repo)
-- **שרת:** Render.com — Web Service, Starter ($7/חודש, always-on)
-- **DB:** MongoDB Atlas — M0 free tier (512MB)
-- **Region:** Frankfurt (EU-West) — מומלץ לחברות ישראליות
+### ערימת טכנולוגיות מומלצת
+| שכבה | שירות | עלות |
+|------|--------|------|
+| קוד | GitHub (private repo) | חינם |
+| שרת | Render.com — Web Service, Starter | $7/חודש |
+| DB | MongoDB Atlas — M0 | חינם (512MB) |
+| Region | Frankfurt (EU-West) | — |
 
 ### הגדרות Render
 ```
 Build Command: npm install
 Start Command: node server.js
-Environment:
-  MONGODB_URI = mongodb+srv://...
-  ADMIN_PASSWORD = your_password
-  NODE_ENV = production
+Environment Variables: MONGODB_URI, ADMIN_PASSWORD, NODE_ENV=production
 ```
 
-### עדכון קוד לאחר שינוי
+### עדכון קוד אחרי שינוי
 ```bash
-git add -A
+git add .
 git commit -m "תיאור השינוי"
 git push
 # Render מפרוס אוטומטית תוך ~2 דקות
@@ -166,23 +209,17 @@ git push
 
 ## 8. באגים נפוצים ופתרונות
 
-### Linux case-sensitive (Critical!)
+### Linux case-sensitive — הכי נפוץ בהעלאה לענן
 ```javascript
-// ❌ שגוי — ב-Render (Linux) שם תיקייה Public לא = public
+// ❌ שגוי — Render רץ על Linux, שם תיקייה 'public' ≠ 'Public'
 app.use(express.static('public'));
 
-// ✅ נכון — להתאים לשם התיקייה בדיוק
+// ✅ נכון — חייב להתאים לשם התיקייה בדיוק
 app.use(express.static('Public'));
 ```
-גם ב-`git add` — חובה לכתוב `Public/index.html` ולא `public/index.html`.
+גם ב-`git add` — `Public/index.html` ולא `public/index.html`.
 
-### Dashboard לא גולל
-```css
-/* dashboard.html — override לגלובל שחוסם גלילה */
-html, body { overflow: auto !important; height: auto !important; min-height: 100%; }
-```
-
-### חזרה מהדשבורד לשאלון (לא למסך login)
+### חזרה מדשבורד לשאלון — לא למסך הפתיחה
 ```html
 <!-- dashboard.html -->
 <a href="index.html?from=dashboard">← לשאלון</a>
@@ -190,70 +227,115 @@ html, body { overflow: auto !important; height: auto !important; min-height: 100
 ```javascript
 // app.js — DOMContentLoaded
 if (new URLSearchParams(window.location.search).get('from') === 'dashboard') {
-  showScreen('role');
+  showScreen('role'); // דלג על מסך הפתיחה
 }
 ```
 
-### שמות שכבר מילאו נעלמים מהרשימה
+### הסתרת שמות שכבר מילאו מהרשימה
 ```javascript
-// app.js — DOMContentLoaded (חייב async)
-const resp = await fetch('/api/submitted-names');
-const data = await resp.json();
-const submittedEmployees = data.employee || [];
-ORG.allEmployees.forEach(name => {
-  if (submittedEmployees.includes(name)) return; // דלג
-  // הוסף לרשימה...
+// app.js — DOMContentLoaded חייב להיות async
+window.addEventListener('DOMContentLoaded', async () => {
+  const resp = await fetch('/api/submitted-names');
+  const { submitted } = await resp.json();
+  RESPONDENTS.forEach(name => {
+    if (submitted.includes(name)) return; // דלג
+    // הוסף option לרשימה...
+  });
 });
+```
+
+### וידאו ברקע לא עוצר/מתחיל בניווט
+```javascript
+// showScreen() — ב-app.js
+if (_currentScreenId === 'login') document.getElementById('login-video').pause();
+if (id === 'login') document.getElementById('login-video').play();
 ```
 
 ---
 
-## 9. עיצוב
+## 9. עיצוב — מערכת עיצוב גנרית
 
-- **צבע ראשי:** `#1a5f7a` (כחול כהה)
-- **צבע משני:** `#00b4d8` (תכלת)
-- **כרטיסים:** זכוכית מטושטשת — `backdrop-filter: blur(12px)` + `rgba(255,255,255,0.88)`
-- **צל:** `0 8px 32px rgba(13,51,71,0.22)`
-- **Radius:** 18px לכרטיסים
-- **פונט:** Segoe UI / Arial, RTL
-- **רקע:** תמונה `images/bg.png` עם overlay כהה
+```css
+:root {
+  --primary:      #1a5f7a;   /* צבע ראשי — שנה לפי מיתוג הלקוח */
+  --primary-light:#00b4d8;
+  --dark:         #0d3347;
+  --glass-bg:     rgba(255,255,255,0.88);
+  --shadow:       0 8px 32px rgba(13,51,71,0.22);
+  --radius:       18px;
+}
+```
+
+### כרטיסים (Glass Morphism)
+```css
+.card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 40px 48px;
+  max-width: 560px;
+  width: 100%;
+}
+```
 
 ### כפתורים
 ```css
-.btn-primary   /* כחול כהה — פעולה ראשית */
-.btn-secondary /* אפור — חזרה */
+.btn-primary   /* צבע ראשי — פעולה ראשית */
+.btn-secondary /* אפור — חזרה / ביטול */
 .btn-outline   /* גבול בלבד */
 .btn-block     /* רוחב מלא */
-.btn-lg        /* גדול */
+.btn-lg        /* גדול יותר */
 ```
 
 ---
 
 ## 10. רשימת בדיקות לפני העלאה לפרודקשן
 
-- [ ] שמות עובדים ומנהלים מעודכנים ב-`data.js`
-- [ ] כל עובד שב-`allEmployees` קיים גם כ-employee של מנהל כלשהו
-- [ ] וידאו פתיחה מוגדר ב-`Public/Front/`
+- [ ] רשימות משיבים ושאלות מעודכנות ב-`data.js`
 - [ ] לוגו קיים ב-`Public/images/logo.jpg`
 - [ ] רקע קיים ב-`Public/images/bg.png`
+- [ ] וידאו (אם יש) קיים ב-`Public/Front/`
 - [ ] `MONGODB_URI` ו-`ADMIN_PASSWORD` מוגדרים ב-Render
-- [ ] `data/responses.json` ב-`.gitignore`
-- [ ] `express.static('Public')` — P גדולה מתאימה לשם התיקייה בפועל
-- [ ] אין `node_modules` ב-git
+- [ ] `.env` ו-`data/responses.json` ב-`.gitignore`
+- [ ] `express.static('...')` — שם התיקייה זהה לתיקייה האמיתית (case-sensitive)
+- [ ] `node_modules/` ב-`.gitignore`
+- [ ] בדיקת גלילה בדשבורד
+- [ ] בדיקת ניווט אחורה מכל מסך
 
 ---
 
-## 11. הרחבות אפשריות לפרויקטים עתידיים
+## 11. התאמה לסוגי סקרים שונים
 
-- **אנונימיות:** הסרת שם עובד ושמירה רק של ID אקראי
-- **תזכורות:** שליחת מייל/SMS לעובדים שטרם מילאו
-- **מספר מחזורים:** הוספת שדה `cycle` לתמיכה בסבבי הערכה שנתיים
-- **השוואה בין סבבים:** גרף מגמה בדשבורד
-- **שאלות מותאמות לתפקיד:** קטגוריה `role` בעובד ושאלות שונות לפי תפקיד
-- **export PDF:** שימוש ב-puppeteer לדוח מפורט לעובד
-- **מולטי-לשוני:** i18n עם קובץ JSON לתרגומים
-- **הגנת מנהל:** כל מנהל רואה רק את הצוות שלו בדשבורד
+| סוג סקר | שינויים נדרשים |
+|----------|---------------|
+| שביעות רצון לקוחות | RESPONDENTS = רשימת לקוחות / ללא רשימה (פתוח לכל) |
+| הצבעה פנימית | סולם כן/לא במקום 1–4, שאלה אחת |
+| מחקר אקדמי | שאלות אנונימיות, ללא dropdown שם, שמירה עם UUID |
+| שאלון 360° | כמה סוגי ממלאים (עצמי / עמית / מנהל) — כמו אוריון |
+| סקר לקוח יחיד | מסך role → בחר איזה שירות מדרג |
+| שאלון הרשמה | החלפת "ratings" ב-"fields" (טקסט חופשי, תאריך, וכד') |
+
+### לסקר אנונימי — הסר dropdown שם והוסף UUID
+```javascript
+// במקום employeeName — צור מזהה אקראי
+const sessionId = crypto.randomUUID();
+body = { sessionId, ratings: state.ratings, open: state.open };
+```
 
 ---
 
-*בנוי עבור קבוצת אוריון | By Nk Group ©*
+## 12. הרחבות עתידיות
+
+- **תזכורות אוטומטיות** — מייל/WhatsApp למי שלא מילא (Node-cron + Nodemailer)
+- **מחזורים** — שדה `cycle` בכל תשובה לתמיכה בסבבים שנתיים
+- **השוואה בין סבבים** — גרף מגמה בדשבורד
+- **export PDF** — דוח פרטני לכל משיב (Puppeteer)
+- **מולטי-לשוני** — קובץ JSON לתרגומים, שינוי שפה בזמן אמת
+- **authentication אמיתי** — JWT / session במקום סיסמה אחת קבועה
+- **הגנת תצוגה** — כל מנהל / מנהלת רואה רק את הקבוצה שלה בדשבורד
+- **Webhook** — שליחת תוצאות אוטומטית ל-Slack / Google Sheets בסיום
+
+---
+
+*By Nk Group © — Template for reusable survey systems*
