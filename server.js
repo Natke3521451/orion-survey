@@ -11,7 +11,7 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const DATA_FILE = path.join(__dirname, 'data', 'responses.json');
 
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static('Public'));
 
 /* ── Mode: MongoDB (cloud) or JSON file (local demo) ── */
 let useDB = false;
