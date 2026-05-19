@@ -258,9 +258,9 @@ function selectRating(val) {
     btn.classList.toggle('selected', parseInt(btn.dataset.val) === val);
   });
 
-  // Auto-advance after short delay
+  // Auto-advance after short delay — only if user hasn't already moved forward
   setTimeout(() => {
-    if (idx < state.questions.length + state.openQs.length - 1) {
+    if (state.currentQ === idx && idx < state.questions.length + state.openQs.length - 1) {
       state.currentQ++;
       renderQuestion();
     }
