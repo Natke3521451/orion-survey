@@ -104,6 +104,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   empSel.addEventListener('change', checkExistingEmployeeSubmission);
+
+  if (new URLSearchParams(window.location.search).get('from') === 'dashboard') {
+    showScreen('role');
+  }
 });
 
 async function checkExistingEmployeeSubmission() {
