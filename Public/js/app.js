@@ -1,6 +1,7 @@
 /* ══════════════════════════════════════════════════
    State
 ══════════════════════════════════════════════════ */
+let _ratingCooldown = false;
 const state = {
   mode: null,          // 'employee' | 'manager'
   employeeName: null,
@@ -203,10 +204,15 @@ function finishManagerFlow() {
 const TOTAL_STEPS = 25 + 3; // 25 rated + 3 open
 
 function renderQuestion() {
+  // Block ghost clicks on iOS for 500ms after navigation
+  _ratingCooldown = true;
+  setTimeout(() => { _ratingCooldown = false; }, 500);
+
   // Instantly clear rating selection (no CSS transition) before showing next question
   document.querySelectorAll('.rating-btn').forEach(btn => {
     btn.style.transition = 'none';
     btn.classList.remove('selected');
+    btn.blur();
   });
   requestAnimationFrame(() => {
     document.querySelectorAll('.rating-btn').forEach(btn => btn.style.transition = '');
@@ -253,6 +259,7 @@ function renderQuestion() {
 }
 
 function selectRating(val) {
+  if (_ratingCooldown) return;
   const idx = state.currentQ;
   if (idx >= state.questions.length) return;
 

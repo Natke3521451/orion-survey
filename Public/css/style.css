@@ -279,6 +279,8 @@ html, body {
   cursor: pointer;
   transition: var(--transition);
   font-family: inherit;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 .rating-btn .num {
   font-size: 1.6rem;
