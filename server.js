@@ -16,12 +16,21 @@ app.use(express.static('Public'));
 /* ── Mode: MongoDB (cloud) or JSON file (local demo) ── */
 let useDB = false;
 
+function startServer() {
+  app.listen(PORT, () => {
+    console.log(`\n✅ מערכת אוריון פועלת: http://localhost:${PORT}`);
+    console.log(`   מצב: ${useDB ? 'MongoDB' : 'קובץ מקומי (JSON)'}\n`);
+  });
+}
+
 if (MONGODB_URI) {
   mongoose.connect(MONGODB_URI)
     .then(() => { useDB = true; console.log('✅ MongoDB מחובר'); })
-    .catch(err => console.warn('⚠️  MongoDB לא זמין, עובד עם קובץ מקומי:', err.message));
+    .catch(err => console.warn('⚠️  MongoDB לא זמין, עובד עם קובץ מקומי:', err.message))
+    .finally(() => startServer());
 } else {
   console.log('📁 מצב מקומי – שומר ל-responses.json');
+  startServer();
 }
 
 const responseSchema = new mongoose.Schema({
@@ -38,10 +47,33 @@ function readJson() {
   catch { return { employee: [], manager: [] }; }
 }
 function writeJson(data) {
+  const dir = path.dirname(DATA_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
 /* ── Routes ── */
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, mode: useDB ? 'mongodb' : 'json', mongoState: mongoose.connection.readyState });
+});
+
+app.post('/api/admin/delete', async (req, res) => {
+  if (req.body.password !== ADMIN_PASSWORD) return res.status(401).json({ error: 'סיסמה שגויה' });
+  const { type, name } = req.body;
+  try {
+    if (useDB) {
+      if (type === 'employee') await EmployeeResponse.deleteOne({ employeeName: name });
+      else await ManagerResponse.deleteOne({ managerName: name, employeeName: req.body.employeeName });
+    } else {
+      const d = readJson();
+      if (type === 'employee') d.employee = d.employee.filter(r => r.employeeName !== name);
+      else d.manager = d.manager.filter(r => !(r.managerName === name && r.employeeName === req.body.employeeName));
+      writeJson(d);
+    }
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
 app.get('/api/submitted-names', async (req, res) => {
   try {
     if (useDB) {
@@ -148,7 +180,3 @@ app.post('/api/export', async (req, res) => {
   res.send(buffer);
 });
 
-app.listen(PORT, () => {
-  console.log(`\n✅ מערכת אוריון פועלת: http://localhost:${PORT}`);
-  console.log(`   מצב: ${useDB ? 'MongoDB' : 'קובץ מקומי (JSON)'}\n`);
-});
