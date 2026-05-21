@@ -204,19 +204,9 @@ function finishManagerFlow() {
 const TOTAL_STEPS = 25 + 3; // 25 rated + 3 open
 
 function renderQuestion() {
-  // Block ghost clicks on iOS for 500ms after navigation
+  // Block ghost clicks on iOS for 600ms after navigation
   _ratingCooldown = true;
-  setTimeout(() => { _ratingCooldown = false; }, 500);
-
-  // Instantly clear rating selection (no CSS transition) before showing next question
-  document.querySelectorAll('.rating-btn').forEach(btn => {
-    btn.style.transition = 'none';
-    btn.classList.remove('selected');
-    btn.blur();
-  });
-  requestAnimationFrame(() => {
-    document.querySelectorAll('.rating-btn').forEach(btn => btn.style.transition = '');
-  });
+  setTimeout(() => { _ratingCooldown = false; }, 600);
 
   const idx = state.currentQ;
   const totalQ = state.questions.length;
@@ -232,11 +222,17 @@ function renderQuestion() {
   const nextBtn = document.getElementById('btn-next');
 
   if (idx < totalQ) {
-    // Rated question
+    // Rated question — rebuild buttons from scratch to guarantee clean state on all browsers
     const q = state.questions[idx];
     document.getElementById('q-step-label').textContent = `שאלה ${idx + 1} מתוך ${totalQ}`;
     document.getElementById('q-cat-badge').textContent = CATEGORIES[q.cat];
     document.getElementById('q-text').textContent = q.text;
+
+    ratingWrap.innerHTML =
+      '<button class="rating-btn" data-val="1" onclick="selectRating(1)"><span class="num">1</span><span class="lbl">נמוך מאד</span></button>' +
+      '<button class="rating-btn" data-val="2" onclick="selectRating(2)"><span class="num">2</span><span class="lbl">נמוך</span></button>' +
+      '<button class="rating-btn" data-val="3" onclick="selectRating(3)"><span class="num">3</span><span class="lbl">גבוה</span></button>' +
+      '<button class="rating-btn" data-val="4" onclick="selectRating(4)"><span class="num">4</span><span class="lbl">גבוה מאד</span></button>';
 
     ratingWrap.style.display = 'grid';
     openWrap.style.display = 'none';
