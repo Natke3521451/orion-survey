@@ -203,6 +203,15 @@ function finishManagerFlow() {
 const TOTAL_STEPS = 25 + 3; // 25 rated + 3 open
 
 function renderQuestion() {
+  // Instantly clear rating selection (no CSS transition) before showing next question
+  document.querySelectorAll('.rating-btn').forEach(btn => {
+    btn.style.transition = 'none';
+    btn.classList.remove('selected');
+  });
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.rating-btn').forEach(btn => btn.style.transition = '');
+  });
+
   const idx = state.currentQ;
   const totalQ = state.questions.length;
   const totalOpen = state.openQs.length;
@@ -227,10 +236,8 @@ function renderQuestion() {
     openWrap.style.display = 'none';
     nextBtn.textContent = idx < totalSteps - 1 ? 'הבא ←' : 'שלח שאלון';
 
-    // Clear selection — each question always appears fresh
-    document.querySelectorAll('.rating-btn').forEach(btn => btn.classList.remove('selected'));
 
-  } else {
+} else {
     // Open question
     const oIdx = idx - totalQ;
     const oq = state.openQs[oIdx];
