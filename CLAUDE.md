@@ -251,6 +251,48 @@ if (_currentScreenId === 'login') document.getElementById('login-video').pause()
 if (id === 'login') document.getElementById('login-video').play();
 ```
 
+### דילוג שאלות — race condition בין אוטו-אדוונס לכפתור "הבא"
+**הבעיה:** משתמש בוחר ציון → timer של 420ms מתחיל → לפני שפג, לוחץ "הבא" → שניהם מקדמים → שאלה נדלגת.
+```javascript
+// ❌ שגוי — אין guard, ה-timer מקדם גם אם כבר עברו קדימה
+setTimeout(() => {
+  if (idx < totalSteps - 1) { state.currentQ++; renderQuestion(); }
+}, 420);
+
+// ✅ נכון — בדוק שעדיין באותה שאלה לפני האדוונס
+setTimeout(() => {
+  if (state.currentQ === idx && idx < totalSteps - 1) {
+    state.currentQ++; renderQuestion();
+  }
+}, 420);
+```
+
+### בחירת ציון "נדבקת" ויזואלית לשאלה הבאה (CSS transition)
+**הבעיה:** ל-`.rating-btn` יש `transition: 0.35s`. כשמסירים `selected` ועוברים לשאלה הבאה, הכפתור עושה fade-out של 350ms — נראה מסומן על השאלה החדשה.
+```javascript
+// ✅ בתחילת renderQuestion — נטרל transition לפני מחיקה, החזר אחרי
+function renderQuestion() {
+  document.querySelectorAll('.rating-btn').forEach(btn => {
+    btn.style.transition = 'none';
+    btn.classList.remove('selected');
+  });
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.rating-btn').forEach(btn => btn.style.transition = '');
+  });
+  // המשך הפונקציה...
+}
+```
+
+### Cache באייפון / דפדפנים — גרסאות ישנות של JS/CSS
+**הבעיה:** לאחר עדכון קוד, דפדפנים (בעיקר Safari במובייל) ממשיכים להשתמש בגרסה ישנה מה-cache.
+```html
+<!-- ✅ הוסף ?v=YYYYMMDD לכל include של JS ו-CSS — שנה את המספר בכל עדכון -->
+<link rel="stylesheet" href="css/style.css?v=20260521"/>
+<script src="js/data.js?v=20260521"></script>
+<script src="js/app.js?v=20260521"></script>
+```
+הדפדפן מתייחס לזה כקובץ חדש לחלוטין ומוריד מחדש.
+
 ---
 
 ## 9. עיצוב — מערכת עיצוב גנרית
