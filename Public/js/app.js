@@ -227,10 +227,8 @@ function renderQuestion() {
     openWrap.style.display = 'none';
     nextBtn.textContent = idx < totalSteps - 1 ? 'הבא ←' : 'שלח שאלון';
 
-    // Restore selection
-    document.querySelectorAll('.rating-btn').forEach(btn => {
-      btn.classList.toggle('selected', parseInt(btn.dataset.val) === state.ratings[q.id]);
-    });
+    // Clear selection — each question always appears fresh
+    document.querySelectorAll('.rating-btn').forEach(btn => btn.classList.remove('selected'));
 
   } else {
     // Open question
