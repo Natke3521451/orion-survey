@@ -362,28 +362,43 @@ async function submitSurvey() {
     };
   }
 
-  try {
-    const resp = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const result = await resp.json();
-    if (result.success) {
-      if (state.mode === 'manager') {
-        state.completedEmployees.push(state.targetEmployee);
-        markChipDone(state.targetEmployee);
-        document.getElementById('btn-after-thanks').textContent = 'חזור להערכת עובדים נוספים';
+  const nextBtn = document.getElementById('btn-next');
+  const origText = nextBtn.textContent;
+  nextBtn.disabled = true;
+  nextBtn.textContent = 'שולח...';
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const result = await resp.json();
+      if (result.success) {
+        if (state.mode === 'manager') {
+          state.completedEmployees.push(state.targetEmployee);
+          markChipDone(state.targetEmployee);
+          document.getElementById('btn-after-thanks').textContent = 'חזור להערכת עובדים נוספים';
+        } else {
+          document.getElementById('btn-after-thanks').textContent = 'סיום';
+        }
+        showScreen('thankyou');
+        return;
       } else {
-        document.getElementById('btn-after-thanks').textContent = 'סיום';
+        break;
       }
-      showScreen('thankyou');
-    } else {
-      alert('שגיאה בשמירת השאלון. אנא נסה שוב.');
+    } catch (err) {
+      if (attempt < 3) {
+        nextBtn.textContent = `מנסה שוב (${attempt}/3)...`;
+        await new Promise(r => setTimeout(r, 3000));
+      }
     }
-  } catch (err) {
-    alert('שגיאת תקשורת עם השרת. ודא שהשרת פועל ונסה שוב.');
   }
+
+  nextBtn.textContent = origText;
+  nextBtn.disabled = false;
+  alert('שגיאה בשמירת השאלון. אנא לחץ שוב על "שלח שאלון".');
 }
 
 function markChipDone(empName) {
