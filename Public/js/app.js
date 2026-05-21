@@ -1,7 +1,6 @@
 /* ══════════════════════════════════════════════════
    State
 ══════════════════════════════════════════════════ */
-let _ratingCooldown = false;
 const state = {
   mode: null,          // 'employee' | 'manager'
   employeeName: null,
@@ -204,10 +203,6 @@ function finishManagerFlow() {
 const TOTAL_STEPS = 25 + 3; // 25 rated + 3 open
 
 function renderQuestion() {
-  // Block ghost clicks on iOS for 600ms after navigation
-  _ratingCooldown = true;
-  setTimeout(() => { _ratingCooldown = false; }, 600);
-
   const idx = state.currentQ;
   const totalQ = state.questions.length;
   const totalOpen = state.openQs.length;
@@ -222,24 +217,36 @@ function renderQuestion() {
   const nextBtn = document.getElementById('btn-next');
 
   if (idx < totalQ) {
-    // Rated question — rebuild buttons from scratch to guarantee clean state on all browsers
     const q = state.questions[idx];
     document.getElementById('q-step-label').textContent = `שאלה ${idx + 1} מתוך ${totalQ}`;
     document.getElementById('q-cat-badge').textContent = CATEGORIES[q.cat];
     document.getElementById('q-text').textContent = q.text;
 
+    // Rebuild buttons without any onclick — attach touchstart+click via addEventListener
     ratingWrap.innerHTML =
-      '<button class="rating-btn" data-val="1" onclick="selectRating(1)"><span class="num">1</span><span class="lbl">נמוך מאד</span></button>' +
-      '<button class="rating-btn" data-val="2" onclick="selectRating(2)"><span class="num">2</span><span class="lbl">נמוך</span></button>' +
-      '<button class="rating-btn" data-val="3" onclick="selectRating(3)"><span class="num">3</span><span class="lbl">גבוה</span></button>' +
-      '<button class="rating-btn" data-val="4" onclick="selectRating(4)"><span class="num">4</span><span class="lbl">גבוה מאד</span></button>';
+      '<button class="rating-btn" data-val="1"><span class="num">1</span><span class="lbl">נמוך מאד</span></button>' +
+      '<button class="rating-btn" data-val="2"><span class="num">2</span><span class="lbl">נמוך</span></button>' +
+      '<button class="rating-btn" data-val="3"><span class="num">3</span><span class="lbl">גבוה</span></button>' +
+      '<button class="rating-btn" data-val="4"><span class="num">4</span><span class="lbl">גבוה מאד</span></button>';
+
+    ratingWrap.querySelectorAll('.rating-btn').forEach(btn => {
+      const val = parseInt(btn.dataset.val);
+      // touchstart + preventDefault cancels all subsequent iOS events (no ghost clicks)
+      btn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        selectRating(val);
+      }, { passive: false });
+      // Fallback for desktop / non-touch
+      btn.addEventListener('click', function() {
+        selectRating(val);
+      });
+    });
 
     ratingWrap.style.display = 'grid';
     openWrap.style.display = 'none';
     nextBtn.textContent = idx < totalSteps - 1 ? 'הבא ←' : 'שלח שאלון';
 
-
-} else {
+  } else {
     // Open question
     const oIdx = idx - totalQ;
     const oq = state.openQs[oIdx];
@@ -255,7 +262,6 @@ function renderQuestion() {
 }
 
 function selectRating(val) {
-  if (_ratingCooldown) return;
   const idx = state.currentQ;
   if (idx >= state.questions.length) return;
 
